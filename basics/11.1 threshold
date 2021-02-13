@@ -1,0 +1,123 @@
+11.1 영상의 이진화
+=====================
+### 11.1.1 이진화
+> 이진화 : 영상의 각 픽셀을 두 개의 분류로 나누는 작업
+> ex) ROI(관심영역)과 비관심영역으로 나누기
+> 픽셀을 0 또는 255로 설정
+
+* dst(x,y) = 255 (src(x,y) > T)
+* dst(x,y) = 0 (그 외)
+* threshold() 함수를 사용
+<pre>
+<code>
+double threshold(InputArray src, OutputArray dst,
+double thresh, double maxval, int type);
+</code>
+</pre>
+* src : 입력 영상
+* dst : 출력 영상
+* thresh : 임계값
+* maxval : THRESH_BINARY 또는 THRESH_BINARY_INV 방법을 사용할 때 결과 영상의 최댓값
+* type : 임계값 연산 방법
+* 반환값 : 사용된 임계값
+
+#### //트랙바를 이용한 이진화 예제
+<pre>
+<code>
+int main(int argc, char* argv[]) {
+	Mat src;
+
+	if (argc < 2)
+		src = imread("neutrophils.png", IMREAD_GRAYSCALE);
+	else
+		src = imread(argv[1], IMREAD_GRAYSCALE);
+
+	if (src.empty()) {
+		cerr << "Image load failed!" << endl;
+		return -1;
+	}
+
+	imshow("src", src);
+
+	namedWindow("dst");
+	createTrackbar("Threshold", "dst", 0, 255, on_threshold, (void*)&src);
+	setTrackbarPos("Threshold", "dst", 128);
+
+	waitKey();
+	return 0;
+}
+
+void on_threshold(int pos, void* userdata) {
+	Mat src = *(Mat*)userdata;
+
+	Mat dst;
+	threshold(src, dst, pos, 255, THRESH_BINARY);
+
+	imshow("dst", dst);
+}
+</code>
+</pre>
+
+![Alt text](https://github.com/kvmii/opencv/blob/main/binarization/threshold.png?raw=true)
+
+### 11.1.2 적응형 이진화
+> 전역 이진화 : 모든 픽셀에 같은 임계값
+> 불균형한 조명에서는 객체와 배경의 구분이 어려움
+> 적응형 이진화 : 각 픽셀마다 서로 다른 임계값
+
+* T(x,y) = u(x,y) - C
+* u(x,y) : 주변 픽셀 값 평균
+* C : 임계값의 크기를 조정하는 상수
+
+###### adaptiveThreshold() 함수
+<pre>
+<code>
+void adaptiveThreshold(InputArray src, OutputArray dst, double maxValue,
+int adaptiveMethod, int thresholdType, int blockSize, double C);
+</code>
+</pre>
+* src : 입력 영상.
+* dst : 출력 영상
+* maxValue : 이진화 결과 영상의 최댓값
+* adaptiveMethod : 적응형 이진화에서 블록 평균 계산 방법 지정
+* thresholdType : THRESH_BINARY, THRESH_BINARY_INV 중 하나를 지정
+* blockSize : 임계값 계산 시 사용하는 블록 크기. 3보다 같거나 큰 홀수
+* C : 임계값 조정을 위한 상수. 블록 평균에서 C를 뺀 값을 임계값으로 사용
+
+#### //적응형 이진화 예제
+<pre>
+<code>
+int main(int argc, char* argv[]) {
+	Mat src;
+
+	src = imread("sudoku.jpg", IMREAD_GRAYSCALE);
+	if (src.empty()) {
+		cerr << "Image load failed!" << endl;
+
+	}
+	imshow("src", src);
+
+	namedWindow("dst");
+	createTrackbar("Block Size", "dst", 0, 200, on_trackbar, (void*)&src);
+	setTrackbarPos("Block Size", "dst", 128);
+
+	waitKey();
+	return 0;
+}
+
+void on_trackbar(int pos, void* userdata) {
+	Mat src = *(Mat*)userdata;
+
+	int bsize = pos;
+	if (bsize % 2 == 0) bsize--;
+	if (bsize < 3) bsize = 3;
+
+	Mat dst;
+	adaptiveThreshold(src, dst, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, bsize, 5);
+
+	imshow("dst", dst);
+}
+</code>
+</pre>
+
+![Alt text](https://github.com/kvmii/opencv/blob/main/binarization/adaptive%20threshold.png?raw=true)
